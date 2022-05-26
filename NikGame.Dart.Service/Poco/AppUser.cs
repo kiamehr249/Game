@@ -14,7 +14,7 @@ namespace NikGame.Dart.Service
         public string FirstName { get; set; }
         public string LastName { get; set; }
 
-        public virtual ICollection<DartMatch> WinDartMatches { get; set; }
+        public virtual ICollection<DartMatch> DartMatches { get; set; }
         public virtual ICollection<DartMatchUser> DartMatchUsers { get; set; }
         public virtual ICollection<DartShoot> DartShoots { get; set; }
     }

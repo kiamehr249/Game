@@ -53,7 +53,7 @@ namespace NikGame.Web.Apis
                     currentMatch.EndDate = currentMatch.StartDate.AddMinutes(5);
                     if (winer.Count > 0)
                     {
-                        currentMatch.WinerId = winer[0].Id;
+                        currentMatch.UserId = winer[0].UserId;
                         currentMatch.WinerScore = winer[0].TotalScore;
                     }
                     await _iDartServ.iDartMatchServ.SaveChangesAsync();
@@ -141,6 +141,13 @@ namespace NikGame.Web.Apis
             if (match.StartDate.AddMinutes(5) < DateTime.Now)
             {
                 match.EndDate = match.StartDate.AddMinutes(5);
+                var winer = _iDartServ.iDartMatchUserServ.QueryMaker(y => y.Where(x => x.MatchId == matchId)).OrderByDescending(x => x.TotalScore).Skip(0).Take(1).ToList();
+                if(winer.Count > 0)
+                {
+                    match.UserId = winer[0].UserId;
+                    match.WinerScore = winer[0].TotalScore;
+                }
+                
                 await _iDartServ.iDartMatchServ.SaveChangesAsync();
                 return BadRequest(new
                 {
@@ -180,7 +187,10 @@ namespace NikGame.Web.Apis
             await _iDartServ.iDartShootServ.SaveChangesAsync();
 
             //Do push update score board
-            _pushService.Clients.All.SendAsync("UpdateMatchTops", matchId);
+            if (score > 0)
+            {
+                _pushService.Clients.All.SendAsync("UpdateMatchTops", matchId);
+            }
 
             return Ok(new
             {
@@ -209,10 +219,14 @@ namespace NikGame.Web.Apis
             match.EndDate = match.StartDate.AddMinutes(5);
 
             var winer = _iDartServ.iDartMatchUserServ.QueryMaker(y => y.Where(x => x.MatchId == matchId)).OrderByDescending(x => x.TotalScore).Skip(0).Take(1).ToList();
+            string firstName = string.Empty;
+            string lastName = string.Empty;
             if (winer.Count > 0)
             {
-                match.WinerId = winer[0].Id;
+                match.UserId = winer[0].UserId;
                 match.WinerScore = winer[0].TotalScore;
+                firstName = winer[0].User.FirstName;
+                lastName = winer[0].User.LastName;
             }
             await _iDartServ.iDartMatchServ.SaveChangesAsync();
 
@@ -226,10 +240,10 @@ namespace NikGame.Web.Apis
                 {
                     match.Id,
                     match.Title,
-                    match.WinerId,
+                    match.UserId,
                     match.WinerScore,
-                    FirstName = match.Winer != null ? match.Winer.FirstName : "",
-                    LastName = match.Winer != null ? match.Winer.LastName : ""
+                    FirstName = firstName,
+                    LastName = lastName
                 }
             });
         }
@@ -237,12 +251,12 @@ namespace NikGame.Web.Apis
         [HttpGet]
         public IActionResult GetTopWinners(int size)
         {
-            var winers = _iDartServ.iDartMatchServ.QueryMaker(y => y.Where(x => x.EndDate != null)).Select(x => new
+            var winers = _iDartServ.iDartMatchServ.QueryMaker(y => y.Where(x => x.EndDate != null && x.UserId != null)).Select(x => new
             {
                 x.Id,
                 x.Title,
-                x.Winer.FirstName,
-                x.Winer.LastName,
+                x.AppUser.FirstName,
+                x.AppUser.LastName,
                 x.WinerScore
             }).OrderByDescending(x => x.WinerScore).Skip(0).Take(size).ToList();
 

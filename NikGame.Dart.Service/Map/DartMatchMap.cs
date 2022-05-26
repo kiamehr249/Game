@@ -10,9 +10,9 @@ namespace NikGame.Dart.Service
             builder.HasKey(x => x.Id);
             builder.ToTable("DartMatches");
 
-            builder.HasOne(x => x.Winer)
-                .WithMany(x => x.WinDartMatches)
-                .HasForeignKey(x => x.WinerId).IsRequired(false);
+            builder.HasOne(x => x.AppUser)
+                .WithMany(x => x.DartMatches)
+                .HasForeignKey(x => x.UserId).IsRequired(false);
 
         }
     }

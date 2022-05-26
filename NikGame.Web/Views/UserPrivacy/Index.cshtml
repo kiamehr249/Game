@@ -46,7 +46,8 @@
                                 <div class="text-center pt-2 pb-2">
                                     <b>Remaining Time: {{timer.minutes}} : {{timer.seconds}}</b>
                                     <p class="text-muted"><b>Total Scores: {{totalScore}}</b> - <b>Shoot Score: {{currentShoot.shotScore}}</b></p>
-                                    <button v-on:click="shootDart()" type="button" class="btn btn-outline-warning">SHOOT</button>
+                                    <button id="btnshoot" v-on:click="shootDart()" type="button" class="btn btn-outline-warning">SHOOT <i v-if="!shootEnable" class="fas fa-cog fa-spin"></i></button>
+                                    <p v-if="!shootEnable">Please Wait ...</p>
                                 </div>
                             </div>
                         </div>
@@ -110,7 +111,8 @@
                     winerScore: 0,
                     firstName: '',
                     lastName: ''
-                }
+                },
+                shootEnable: true,
             },
             created: function () {
             },
@@ -128,6 +130,7 @@
                                 self.getRemain(self.match.startDate);
                                 self.setTimer();
                                 self.gameSart = true;
+                                self.gameOver = false;
                             } else {
                                 self.showMessage({ message: apiResults.message, type: 'error' });
                             }
@@ -136,7 +139,7 @@
                 },
                 shootDart: function () {
                     var self = this;
-                    this.visible = true;
+                    this.changeShootBtn();
                     this.getApi(this.bUrl + "DartsShoot/?matchId=" + this.match.id + '&score=' + this.getShootScore())
                         .then((apiResults) => {
                             if (apiResults.status === 200) {
@@ -149,7 +152,6 @@
                                 }
                                 self.showMessage({ message: apiResults.message, type: 'error' });
                             }
-                            this.visible = false;
                         });
                 },
                 getTops: function () {
@@ -171,8 +173,9 @@
                     this.getApi(this.bUrl + "FinishGame/?matchId=" + this.match.id)
                         .then((apiResults) => {
                             if (apiResults.status === 200) {
+                                self.gameInfo = apiResults.data;
                                 self.gameOver = true;
-                                apiResults.data.match
+                                
                             } else {
                                 self.showMessage({ message: apiResults.message, type: 'error' });
                             }
@@ -207,6 +210,15 @@
                             self.setGameOver();
                         }
                     }, 1000);
+                },
+                changeShootBtn: function () {
+                    var self = this;
+                    this.shootEnable = false;
+                    $('#btnshoot').prop("disabled", true);
+                    setTimeout(function () {
+                        $('#btnshoot').prop("disabled", false);
+                        self.shootEnable = true;
+                    }, 2000);
                 }
             }
         }, 'game');
