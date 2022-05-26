@@ -1,0 +1,56 @@
+﻿@using NikGame.Dart.Service;
+@{
+    ViewData["Title"] = "Home";
+    var games = (List<DartMatch>)ViewBag.Matches;
+}
+
+<div class="text-center">
+    <h1 class="display-4">Welcome<br />you can play right now </h1>
+    <p>If you have an account do login or create an acount and enjoy the game</p>
+</div>
+
+<div class="container">
+    @if (User.Identity.IsAuthenticated)
+    {
+        <div class="row mb-4">
+            <div class="col-md-4 offset-4">
+                <div class="card text-white bg-dark shadow">
+                    <div class="card-body">
+                        <a class="text-white text-center p-4 d-block" href="/UserPrivacy">Play New Game</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="row mb-4">
+            <div class="col-md-4 offset-2">
+                <div class="card text-white bg-dark shadow">
+                    <div class="card-body">
+                        <a class="text-center text-white p-4 d-block" href="/UserPrivacy/Login">Click To Sign In</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-white bg-dark shadow">
+                    <div class="card-body">
+                        <a class="text-center text-white p-4 d-block" href="/UserPrivacy/Register">Click To Register</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <br />
+    <div class="row">
+        <div class="col-md-6 offset-md-3">
+            <ul class="list-group">
+                @foreach (var item in games)
+                {
+                    <li class="list-group-item">@item.Title @item.Id - Winner is: @item.Winer.FirstName @item.Winer.LastName - Score is: @item.WinerScore</li>
+                }
+            </ul>
+        </div>
+    </div>
+</div>

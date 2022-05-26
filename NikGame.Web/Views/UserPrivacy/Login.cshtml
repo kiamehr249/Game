@@ -1,0 +1,59 @@
+﻿@using NikGame.Service;
+@model LoginRequest
+@{
+    ViewData["Title"] = "Sign In";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var Messages = (List<string>)ViewBag.Messages;
+}
+
+<section id="my-account-area" class="pt-5 pb-5">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-6 offset-md-3">
+                <div class="card text-white bg-dark shadow">
+                    <div class="card-header">
+                        <h1>Sign In Now</h1>
+                    </div>
+                    <div class="card-body">
+                        <form class="my-account-form" action="/UserPrivacy/Login" method="post">
+                            <div class="form-group">
+                                <label for="TxtUsername">Phone Number</label>
+                                @Html.TextBoxFor(m => m.UserName, new { placeholder = "09...", @class = "form-control", @id = "TxtUsername" })
+                            </div>
+
+                            <div class="form-group">
+                                <label for="TxtPassword">Password</label>
+                                @Html.PasswordFor(m => m.Password, new { placeholder = "password", @class = "form-control", @id = "TxtPassword" })
+                            </div>
+
+                            <div class="form-group">
+                                <button type="submit" class="btn btn-outline-warning">Sign In Me</button>
+                            </div>
+
+                            <div class="form-group">
+                                <a class="text-muted" href="/UserPrivacy/Register">If you want to create a new account click here</a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+<br />
+<script>
+    $(document).ready(function () {
+        @if (Messages != null)
+        {
+            @foreach (var msg in Messages)
+            {
+                <text>
+                showMessage({
+                    text: '@msg',
+                    type: 'error'
+                });
+                </text>
+            }
+        }
+    });
+</script>

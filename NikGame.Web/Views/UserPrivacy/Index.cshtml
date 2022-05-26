@@ -1,0 +1,104 @@
+﻿@using NikGame.Service;
+@{
+    ViewData["Title"] = "Start Game";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var Messages = (List<string>)ViewBag.Messages;
+}
+
+
+
+<section id="app" class="pt-5 pb-5">
+    <div class="container">
+        <div class="text-center">
+            <button v-on:click="startGame()" type="button" class="btn btn-outline-dark">Start Game</button>
+            <p>Waiting For Opponent</p>
+        </div>
+    </div>
+</section>
+
+<script src="~/lib/signalr/dist/browser/signalr.min.js"></script>
+
+<script>
+    "use strict";
+
+    var connection = new signalR.HubConnectionBuilder().withUrl("/DartHub").build();
+
+    connection.on("ReceiveMessage", sendMessage);
+    connection.on("AllowStartGame", allowStartMatch);
+    connection.on("UpdateScoreList", updatePlayerList);
+
+    connection.start().then(function () {
+        //document.getElementById("sendButton").disabled = false;
+    }).catch(function (err) {
+        return console.error(err.toString());
+    });
+
+    $(document).ready(function () {
+        getInstance({
+            el: '#app',
+            mixins: [utilities],
+            data: {
+                bUrl: '/api/DartsPlay/',
+                loading: false,
+                match: {
+                    id: 0,
+                    title: '',
+                    startDate: ''
+                },
+                opponents: [],
+                startState: false,
+            },
+            created: function () {
+            },
+            methods: {
+                startGame: function () {
+                    var self = this;
+                    this.visible = true;
+                    this.getApi(this.bUrl + "StartGame")
+                        .then((apiResults) => {
+                            if (apiResults.status === 200) {
+                                self.match = apiResults.data.match;
+                                self.opponents = apiResults.data.opponents;
+                                self.startState = apiResults.data.startState;
+                            } else {
+                                self.showMessage({ message: apiResults.message, type: 'error' });
+                            }
+                            this.visible = false;
+                        });
+                },
+                shootDart: function () {
+                    var self = this;
+                    this.visible = true;
+                    this.getApi(this.bUrl + "DartsShoot")
+                        .then((apiResults) => {
+                            if (apiResults.status === 200) {
+                                self.currentShoot = apiResults.data.shoot;
+                            } else {
+                                self.showMessage({ message: apiResults.message, type: 'error' });
+                            }
+                            this.visible = false;
+                        });
+                },
+                allowStart: function () {
+                    this.startState = true;
+                },
+
+            }
+        }, 'game');
+
+    });
+
+    function sendMessage(user, message) {
+        alert(`${user} says ${message}`);
+    }
+
+    function allowStartMatch(matchId) {
+        rootObjects.game.allowStart(matchId);
+        alert(`Darts Game ${matchId} was started`);
+    }
+
+    function updatePlayerList(matchId) {
+        alert(`Darts Game ${matchId}, player list was started`);
+    }
+</script>
+

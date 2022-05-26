@@ -1,0 +1,75 @@
+﻿@using NikGame.Service;
+@model RegisterRequest
+@{
+    ViewData["Title"] = "User Registration";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var Messages = (List<string>)ViewBag.Messages;
+}
+
+<section class="pt-5 pb-5">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-6 offset-md-3">
+                <div class="card text-white bg-dark shadow">
+                    <div class="card-header">
+                        <h1>Register Now</h1>
+                    </div>
+                    <div class="card-body">
+                        <form action="/UserPrivacy/Register" method="post">
+                            <div class="form-group">
+                                <label for="txtFirstname">Name</label>
+                                @Html.TextBoxFor(m => m.FirstName, new { placeholder = "name", @class = "form-control", @id = "txtFirstname" })
+                            </div>
+
+                            <div class="form-group">
+                                <label for="txtLastname" class="">Last Name</label>
+                                @Html.TextBoxFor(m => m.LastName, new { placeholder = "last name", @class = "form-control", @id = "txtLastname" })
+                            </div>
+
+                            <div class="form-group">
+                                <label for="txtPhone">Phone Number</label>
+                                @Html.TextBoxFor(m => m.UserName, new { placeholder = "09...", @class = "form-control", @id = "txtPhone" })
+                            </div>
+
+                            <div class="form-group">
+                                <label for="txtPasword">Password</label>
+                                @Html.PasswordFor(m => m.Password, new { placeholder = "password", @class = "form-control", @id = "txtPasword" })
+                            </div>
+
+                            <div class="form-group">
+                                <label for="txtPasswordConf">Confirm Pasword</label>
+                                @Html.PasswordFor(m => m.ConfirmPassword, new { placeholder = "password", @class = "form-control", @id = "txtPasword" })
+                            </div>
+
+                            <div class="form-group">
+                                <button type="submit" class="btn btn-outline-warning">Register Me</button>
+                            </div>
+
+                            <div class="form-group">
+                                <a class="text-muted" href="/UserPrivacy/Login">If you have already account click here</a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+    $(document).ready(function () {
+        @if (Messages != null)
+        {
+            @foreach (var msg in Messages)
+            {
+                <text>
+                showMessage({
+                    text: '@msg',
+                    type: 'error'
+                });
+                </text>
+            }
+        }
+    });
+</script>
