@@ -5,13 +5,54 @@
     var Messages = (List<string>)ViewBag.Messages;
 }
 
-
-
 <section id="app" class="pt-5 pb-5">
     <div class="container">
-        <div class="text-center">
-            <button v-on:click="startGame()" type="button" class="btn btn-outline-dark">Start Game</button>
-            <p>Waiting For Opponent</p>
+        <div v-if="!gameSart" class="row">
+            <div class="col-md-4 offset-md-4">
+                <div class="card text-white bg-dark shadow">
+                    <div class="card-body">
+                        <div class="text-center pt-2 pb-2">
+                            <button v-on:click="startGame()" type="button" class="btn btn-outline-warning">Start Game <i class="fa-regular fa-gamepad"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div v-if="gameOver" class="row">
+            <div class="col-md-4 offset-md-4">
+                <div class="card text-white bg-dark shadow">
+                    <div class="card-body">
+                        <div class="text-center pt-2 pb-2">
+                            <h1>GAME OVER</h1>
+                            <p>{{gameInfo.title}}_{{gameInfo.id}} - Winer: {{gameInfo.firstName}} {{gameInfo.firstName}}</p>
+                            <h4>Score: {{gameInfo.winerScore}}</h4>
+                            <button v-on:click="startGame()" type="button" class="btn btn-outline-warning">Start New Game</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div v-if="gameSart && !gameOver" class="row">
+            <div class="col-md-4">
+                <ul class="list-group">
+                    <li v-for="(item, index) in topClients" class="list-group-item">{{index + 1}} - {{item.firstName}} {{item.lastName}} - Score is: {{item.totalScore}}</li>
+                </ul>
+            </div>
+            <div class="col-md-8">
+                <div class="row">
+                    <div class="col-md-6 offset-md-4">
+                        <div class="card text-white bg-dark shadow">
+                            <div class="card-body">
+                                <div class="text-center pt-2 pb-2">
+                                    <b>Remaining Time: {{timer.minutes}} : {{timer.seconds}}</b>
+                                    <p class="text-muted"><b>Total Scores: {{totalScore}}</b> - <b>Shoot Score: {{currentShoot.shotScore}}</b></p>
+                                    <button v-on:click="shootDart()" type="button" class="btn btn-outline-warning">SHOOT</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </section>
@@ -24,8 +65,8 @@
     var connection = new signalR.HubConnectionBuilder().withUrl("/DartHub").build();
 
     connection.on("ReceiveMessage", sendMessage);
-    connection.on("AllowStartGame", allowStartMatch);
-    connection.on("UpdateScoreList", updatePlayerList);
+    connection.on("UpdateMatchTops", updateMatchTops);
+    connection.on("FinishGame", finishGame);
 
     connection.start().then(function () {
         //document.getElementById("sendButton").disabled = false;
@@ -46,7 +87,30 @@
                     startDate: ''
                 },
                 opponents: [],
-                startState: false,
+                currentShoot: {
+                    id: 0,
+                    shotScore: 0,
+                    createDate: '',
+                },
+                gameOver: false,
+                topClients: [],
+                gameSart: false,
+                totalScore: 0,
+                scores: [1, 2, 3, 5, 10, 15, 25],
+                remaining: 300,
+                tikTak: null,
+                timer: {
+                    minutes: 0,
+                    seconds: 0
+                },
+                gameInfo: {
+                    id: 0,
+                    title: '',
+                    winerId: null,
+                    winerScore: 0,
+                    firstName: '',
+                    lastName: ''
+                }
             },
             created: function () {
             },
@@ -59,7 +123,11 @@
                             if (apiResults.status === 200) {
                                 self.match = apiResults.data.match;
                                 self.opponents = apiResults.data.opponents;
-                                self.startState = apiResults.data.startState;
+                                self.getTops();
+                                self.totalScore = apiResults.data.totalScore;
+                                self.getRemain(self.match.startDate);
+                                self.setTimer();
+                                self.gameSart = true;
                             } else {
                                 self.showMessage({ message: apiResults.message, type: 'error' });
                             }
@@ -69,20 +137,77 @@
                 shootDart: function () {
                     var self = this;
                     this.visible = true;
-                    this.getApi(this.bUrl + "DartsShoot")
+                    this.getApi(this.bUrl + "DartsShoot/?matchId=" + this.match.id + '&score=' + this.getShootScore())
                         .then((apiResults) => {
                             if (apiResults.status === 200) {
                                 self.currentShoot = apiResults.data.shoot;
+                                self.totalScore = apiResults.data.totalScore;
+                                self.gameOver = apiResults.gameOver;
+                            } else {
+                                if (apiResults.gameOver) {
+                                    self.gameOver = apiResults.gameOver;
+                                }
+                                self.showMessage({ message: apiResults.message, type: 'error' });
+                            }
+                            this.visible = false;
+                        });
+                },
+                getTops: function () {
+                    var self = this;
+                    this.visible = true;
+                    this.getApi(this.bUrl + "GetTopMatchUsers/?matchId=" + this.match.id + "&size=3")
+                        .then((apiResults) => {
+                            if (apiResults.status === 200) {
+                                self.topClients = apiResults.data;
                             } else {
                                 self.showMessage({ message: apiResults.message, type: 'error' });
                             }
                             this.visible = false;
                         });
                 },
-                allowStart: function () {
-                    this.startState = true;
+                setGameOver: function () {
+                    var self = this;
+                    this.loading = true;
+                    this.getApi(this.bUrl + "FinishGame/?matchId=" + this.match.id)
+                        .then((apiResults) => {
+                            if (apiResults.status === 200) {
+                                self.gameOver = true;
+                                apiResults.data.match
+                            } else {
+                                self.showMessage({ message: apiResults.message, type: 'error' });
+                            }
+                            this.loading = false;
+                        });
                 },
-
+                getShootScore: function () {
+                    var trueChance = Math.floor(Math.random() * 100);
+                    if (trueChance < 61) {
+                        var item = this.scores[Math.floor(Math.random() * this.scores.length)];
+                        return item;
+                    } else {
+                        return 0;
+                    }
+                },
+                getRemain: function (dt) {
+                    var d1 = new Date(dt);
+                    var d2 = new Date();
+                    this.remaining = 300 - Math.floor((d2.getTime() - d1.getTime()) / 1000);
+                },
+                setTimer: function () {
+                    if (this.tikTak != null) {
+                        clearInterval(this.tikTak);
+                    }
+                    var self = this;
+                    this.tikTak = setInterval(function () {
+                        self.timer.minutes = Math.floor(self.remaining / 60);
+                        self.timer.seconds = Math.floor(self.remaining % 60);
+                        self.remaining--;
+                        if (self.remaining < 0) {
+                            clearInterval(self.tikTak);
+                            self.setGameOver();
+                        }
+                    }, 1000);
+                }
             }
         }, 'game');
 
@@ -92,13 +217,12 @@
         alert(`${user} says ${message}`);
     }
 
-    function allowStartMatch(matchId) {
-        rootObjects.game.allowStart(matchId);
-        alert(`Darts Game ${matchId} was started`);
+    function updateMatchTops(matchId) {
+        rootObjects.game.getTops(matchId);
     }
 
-    function updatePlayerList(matchId) {
-        alert(`Darts Game ${matchId}, player list was started`);
+    function finishGame(matchId) {
+        //rootObjects.game.setGameOver();
     }
 </script>
 

@@ -13,14 +13,14 @@ namespace NikGame.Web.PushService
             await Clients.All.SendAsync("ReceiveMessage", user, message);
         }
 
-        public async Task AllowStartGame(int matchId)
+        public async Task UpdateMatchTops(int matchId)
         {
-            await Clients.All.SendAsync("AllowStartGame", matchId);
+            await Clients.All.SendAsync("UpdateMatchTops", matchId);
         }
 
-        public async Task UpdateScorePlayers(int matchId)
+        public async Task FinishGame(int matchId)
         {
-            await Clients.All.SendAsync("UpdateScoreList", matchId);
+            await Clients.All.SendAsync("FinishGame", matchId);
         }
     }
 }

@@ -43,44 +43,53 @@ namespace NikGame.Web.Apis
             DartMatch match = null;
 
             var currentMatch = _iDartServ.iDartMatchServ.Find(x => x.EndDate == null);
-            if (currentMatch != null && currentMatch.StartDate.AddMinutes(5) > DateTime.Now)
-            {
-                currentMatch.EndDate = currentMatch.StartDate.AddMinutes(5);
-                await _iDartServ.iDartMatchServ.SaveChangesAsync();
 
-                //Do push signal to update top winner list
-            }
-            else if(currentMatch != null)
+            if (currentMatch != null)
             {
-                match = currentMatch;
+                var endDate = currentMatch.StartDate.AddMinutes(5);
+                if (endDate < DateTime.Now)
+                {
+                    var winer = _iDartServ.iDartMatchUserServ.QueryMaker(y => y.Where(x => x.MatchId == currentMatch.Id)).OrderByDescending(x => x.TotalScore).Skip(0).Take(1).ToList();
+                    currentMatch.EndDate = currentMatch.StartDate.AddMinutes(5);
+                    if (winer.Count > 0)
+                    {
+                        currentMatch.WinerId = winer[0].Id;
+                        currentMatch.WinerScore = winer[0].TotalScore;
+                    }
+                    await _iDartServ.iDartMatchServ.SaveChangesAsync();
+                }
+                else
+                {
+                    match = currentMatch;
+                }
             }
 
             if (match == null)
             {
                 match = new DartMatch();
                 match.Title = "Dart Game";
+                match.StartDate = DateTime.Now;
+                match.Players = 1;
                 _iDartServ.iDartMatchServ.Add(match);
                 await _iDartServ.iDartMatchServ.SaveChangesAsync();
             }
-
-            match.Players++;
-
-            if (match.Players > 1)
+            else
             {
-                match.StartDate = DateTime.Now;
-                //Do Push allow start game
-                _pushService.Clients.All.SendAsync("AllowStartGame", match.Id);
+                match.Players++;
             }
-            
 
-            var matchUser = new DartMatchUser
+            var matchUser = await _iDartServ.iDartMatchUserServ.FindAsync(x => x.UserId == user.Id && x.MatchId == match.Id);
+            if (matchUser == null)
             {
-                UserId = user.Id,
-                MatchId = match.Id
-            };
+                matchUser = new DartMatchUser
+                {
+                    UserId = user.Id,
+                    MatchId = match.Id
+                };
+                _iDartServ.iDartMatchUserServ.Add(matchUser);
+                await _iDartServ.iDartMatchUserServ.SaveChangesAsync();
+            }
 
-            _iDartServ.iDartMatchUserServ.Add(matchUser);
-            await _iDartServ.iDartMatchUserServ.SaveChangesAsync();
 
             var opponents = _iDartServ.iDartMatchUserServ.QueryMaker(y => y.Where(x => x.MatchId == match.Id)).Select(x => new
             {
@@ -96,14 +105,14 @@ namespace NikGame.Web.Apis
                 status = 200,
                 data = new
                 {
-                    mathch = new
+                    match = new
                     {
                         match.Id,
                         match.Title,
                         match.StartDate
                     },
                     opponents,
-                    startState = match.Players > 1 ? true : false,
+                    totalScore = matchUser.TotalScore
                 }
             });
 
@@ -116,15 +125,32 @@ namespace NikGame.Web.Apis
         {
             var user = await _userManager.GetUserAsync(HttpContext.User);
 
-            //var match = await _iDartServ.iDartMatchServ.FindAsync(x => x.Id == matchId);
-            //if(match == null)
-            //{
-            //    return BadRequest(new {
-            //        title = "Darts Shoot",
-            //        message = "The parameters was not valid",
-            //        data = ""
-            //    });
-            //}
+            var match = await _iDartServ.iDartMatchServ.FindAsync(x => x.Id == matchId);
+            if (match == null)
+            {
+                return BadRequest(new
+                {
+                    title = "Darts Shoot",
+                    status = 500,
+                    message = "The parameters was not valid",
+                    gameOver = false,
+                    data = ""
+                });
+            }
+
+            if (match.StartDate.AddMinutes(5) < DateTime.Now)
+            {
+                match.EndDate = match.StartDate.AddMinutes(5);
+                await _iDartServ.iDartMatchServ.SaveChangesAsync();
+                return BadRequest(new
+                {
+                    title = "Darts Shoot",
+                    status = 401,
+                    message = "The game is over",
+                    gameOver = true,
+                    data = "",
+                });
+            }
 
             var mUser = _iDartServ.iDartMatchUserServ.Find(x => x.UserId == user.Id && x.MatchId == matchId);
             if (mUser == null)
@@ -132,7 +158,9 @@ namespace NikGame.Web.Apis
                 return BadRequest(new
                 {
                     title = "Darts Shoot",
+                    status = 400,
                     message = "The parameters was not valid",
+                    gameOver = false,
                     data = ""
                 });
             }
@@ -152,19 +180,56 @@ namespace NikGame.Web.Apis
             await _iDartServ.iDartShootServ.SaveChangesAsync();
 
             //Do push update score board
-            _pushService.Clients.All.SendAsync("UpdateScoreList", matchId);
+            _pushService.Clients.All.SendAsync("UpdateMatchTops", matchId);
 
-            return Ok(new { 
+            return Ok(new
+            {
                 title = "Darts Shoot",
+                status = 200,
                 message = "Success Saved",
+                gameOver = false,
                 data = new
                 {
-                    shoot = new {
+                    shoot = new
+                    {
                         shoot.Id,
                         shoot.ShotScore,
                         shoot.CreateDate
                     },
                     mUser.TotalScore
+                }
+            });
+        }
+
+        [HttpGet]
+        [Authorize]
+        public async Task<IActionResult> FinishGame(int matchId)
+        {
+            var match = _iDartServ.iDartMatchServ.Find(x => x.Id == matchId);
+            match.EndDate = match.StartDate.AddMinutes(5);
+
+            var winer = _iDartServ.iDartMatchUserServ.QueryMaker(y => y.Where(x => x.MatchId == matchId)).OrderByDescending(x => x.TotalScore).Skip(0).Take(1).ToList();
+            if (winer.Count > 0)
+            {
+                match.WinerId = winer[0].Id;
+                match.WinerScore = winer[0].TotalScore;
+            }
+            await _iDartServ.iDartMatchServ.SaveChangesAsync();
+
+            //_pushService.Clients.All.SendAsync("FinishGame", matchId);
+
+            return Ok(new
+            {
+                title = "New Match",
+                status = 200,
+                data = new
+                {
+                    match.Id,
+                    match.Title,
+                    match.WinerId,
+                    match.WinerScore,
+                    FirstName = match.Winer != null ? match.Winer.FirstName : "",
+                    LastName = match.Winer != null ? match.Winer.LastName : ""
                 }
             });
         }
@@ -192,7 +257,7 @@ namespace NikGame.Web.Apis
         [HttpGet]
         public IActionResult GetTopMatchUsers(int matchId, int size)
         {
-            var top3 = _iDartServ.iDartMatchUserServ.QueryMaker(y => y.Where(x => x.MatchId == matchId)).Select(x => new
+            var topClients = _iDartServ.iDartMatchUserServ.QueryMaker(y => y.Where(x => x.MatchId == matchId)).Select(x => new
             {
                 x.Id,
                 x.MatchId,
@@ -207,7 +272,7 @@ namespace NikGame.Web.Apis
             {
                 title = "Top Match Player",
                 status = 200,
-                data = top3
+                data = topClients
             });
         }
 

@@ -21,7 +21,7 @@ namespace NikGame.Web.Controllers
 
         public IActionResult Index()
         {
-            var matches = _iDartServ.iDartMatchServ.QueryMaker(y => y.Where(x => x.EndDate != null))
+            var matches = _iDartServ.iDartMatchServ.QueryMaker(y => y.Where(x => x.EndDate != null && x.WinerId != null))
                 .OrderByDescending(x => x.Id).Skip(0).Take(10).ToList();
             ViewBag.Matches = matches;
             return View();
