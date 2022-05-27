@@ -28,5 +28,21 @@ namespace NikGame.Web.PushService
             var value = await Task.FromResult(0);
         }
 
+        public async Task<bool> SendToUser(string userId, string name, string title, string message)
+        {
+            //await Clients.All.SendAsync("ReceiveData", userId, title, message);
+            var connIds = _userConnectionManager.GetUserConnections(userId);
+            if (connIds != null && connIds.Count > 0)
+            {
+                foreach (var connId in connIds)
+                {
+                    await Clients.Client(connId).SendAsync("ReceiveData", userId, name, title, message);
+                }
+                return true;
+            }
+
+            return false;
+        }
+
     }
 }

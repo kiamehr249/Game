@@ -34,10 +34,17 @@
                         <li class="nav-item">
                             <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
                         </li>
+                        @if (User.Identity.IsAuthenticated)
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" asp-area="" asp-controller="Test" asp-action="Messaging">Messaging</a>
+                            </li>
+                        }
+
                         <li class="nav-item">
                             @if (User.Identity.IsAuthenticated)
                             {
-                                <a class="nav-link" asp-area="" asp-controller="UserPrivacy" asp-action="Logout">Log Out</a>
+                                <a class="nav-link" asp-area="" asp-controller="UserPrivacy" asp-action="Logout">Sign Out</a>
                             }
                             else
                             {
@@ -61,7 +68,7 @@
             &copy; 2022 - NikGame.Web - <a class="text-muted" href="http://niksoftapp.ir">www.niksoftapp.ir</a>
         </div>
     </footer>
-    
+
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     @await RenderSectionAsync("Scripts", required: false)
     <script src="~/js/site.js" asp-append-version="true"></script>

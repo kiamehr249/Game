@@ -33,7 +33,7 @@ namespace NikGame.Web
                 .AddEntityFrameworkStores<UserDbContext>();
 
             services.AddScoped<IDartService, DartService>();
-            //services.AddSingleton<IUserConnectionManager, UserConnectionManager>();
+            services.AddSingleton<IUserConnectionManager, UserConnectionManager>();
 
             services.AddControllersWithViews();
             services.AddRazorPages();
@@ -118,7 +118,7 @@ namespace NikGame.Web
                 );
 
                 endpoints.MapHub<DartHub>("/DartHub");
-                //endpoints.MapHub<DartUserHub>("/DartUserHub");
+                endpoints.MapHub<DartUserHub>("/DartUserHub");
                 endpoints.MapRazorPages();
 
             });

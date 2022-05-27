@@ -1,0 +1,160 @@
+﻿@using NikGame.Dart.Service;
+@{
+    ViewData["Title"] = "Admin Page";
+    var user = (NikGame.Dart.Service.User)ViewBag.User;
+}
+
+<section id="app" class="pt-5 pb-5">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card text-white bg-dark">
+                    <div class="card-body">
+                        <div class="form-group">
+                            <p>{{currentUser.name}}</p>
+                        </div>
+                        <div class="form-group">
+                            <select v-model="message.userId" class="form-control">
+                                <option value="0">Select User</option>
+                                <option v-for="item in users" :value="item.id">
+                                    {{item.firstName}} {{item.lastName}}
+                                </option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <input v-model="message.title" type="text" class="form-control" placeholder="Title..." />
+                        </div>
+                        <div class="form-group">
+                            <textarea v-model="message.text" rows="3" class="form-control" placeholder="Message..."></textarea>
+                        </div>
+                        <div class="form-group">
+                            <button v-on:click="sendData()" type="button" class="btn btn-outline-success">Send by web socket</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-8">
+                <div class="card text-white bg-dark">
+                    <div class="card-body">
+                        <div v-if="receiveDatas.length == 0" class="alert alert-warning">
+                            <h4>In box is empty</h4>
+                        </div>
+                        <div v-for="item in receiveDatas" class="row">
+                            <div v-if="!item.input" class="col-sm-3">
+                                <p>{{item.name}}</p>
+                            </div>
+                            <div class="col-md-9">
+                                <div :class="{'p-4 mb-5 shadow bg-success text-white': item.input, 'p-4 mb-5 shadow bg-white text-dark': !item.input}">
+
+                                    <h4>{{item.title}}</h4>
+                                    <p>{{item.text}}</p>
+                                </div>
+                            </div>
+                            <div v-if="item.input" class="col-sm-3">
+                                <p>{{item.name}}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div v-if="loading" class="loading">
+        <div class="loading-bar">
+            <div class="loading-icon">
+                <i class="fas fa-cog fa-spin"></i>
+            </div>
+            <div class="loading-text">
+                Please Wait ...
+            </div>
+        </div>
+    </div>
+</section>
+
+<script src="~/lib/signalr/dist/browser/signalr.min.js"></script>
+
+<script>
+    var clinetId = @user.Id;
+    "use strict";
+    var connection = new signalR.HubConnectionBuilder().withUrl("/DartUserHub?userId=" + clinetId).build();
+    connection.on('ReceiveData', function (userId, name, title, message) {
+        rootObjects.appinstance.receiveDatas.push({
+            id: userId,
+            name: name,
+            title: title,
+            text: message,
+            input: true
+        });
+    });
+
+    connection.start().catch(function (err) {
+        return console.error(err.toString());
+    }).then(function () {
+        connection.invoke('GetConnectionId').then(function (connectionId) {
+            console.log('connectionId: ' + connectionId);
+        });
+    });
+
+    function sendTcp(userId, name, title, message) {
+        connection.invoke("SendToUser", userId.toString(), name, title, message).catch(function (err) {
+            return console.error(err.toString());
+        }).then(function (data) {
+            console.log(data);
+            rootObjects.appinstance.receiveDatas.push({
+                id: userId,
+                name: name,
+                title: title,
+                text: message,
+                input: false
+            });
+        });
+    }
+
+    $(document).ready(function () {
+        getInstance({
+            el: '#app',
+            mixins: [utilities],
+            data: {
+                bUrl: '/Test/',
+                loading: false,
+                currentUser: {
+                    name: '@user.FirstName @user.LastName', 
+                },
+                message: {
+                    userId: 0,
+                    title: '',
+                    text: ''
+                },
+                users: [],
+                clientId: clinetId,
+                receiveDatas: [],
+            },
+            created: function () {
+                this.getUsers();
+            },
+            methods: {
+                getUsers: function () {
+                    var self = this;
+                    this.loading = true;
+                    this.getApi(this.bUrl + "GetUsers")
+                        .then((apiResults) => {
+                            if (apiResults.status === 200) {
+                                self.users = apiResults.data;
+                            } else {
+                                self.showMessage({ message: apiResults.message, type: 'error' });
+                            }
+                            this.loading = false;
+                        });
+                },
+                sendData: function () {
+                    //console.log(this.message.userId + '-' + this.message.title + '-' + this.message.text);
+                    sendTcp(this.message.userId, this.currentUser.name, this.message.title, this.message.text);
+                }
+            }
+        }, 'appinstance');
+
+    });
+
+
+
+</script>
