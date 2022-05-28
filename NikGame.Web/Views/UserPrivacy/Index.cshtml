@@ -56,6 +56,16 @@
             </div>
         </div>
     </div>
+    <div v-if="loading" class="loading">
+        <div class="loading-bar">
+            <div class="loading-icon">
+                <i class="fas fa-cog fa-spin"></i>
+            </div>
+            <div class="loading-text">
+                Please Wait ...
+            </div>
+        </div>
+    </div>
 </section>
 
 <script src="~/lib/signalr/dist/browser/signalr.min.js"></script>
@@ -119,7 +129,7 @@
             methods: {
                 startGame: function () {
                     var self = this;
-                    this.visible = true;
+                    this.loading = true;
                     this.getApi(this.bUrl + "StartGame")
                         .then((apiResults) => {
                             if (apiResults.status === 200) {
@@ -134,7 +144,7 @@
                             } else {
                                 self.showMessage({ message: apiResults.message, type: 'error' });
                             }
-                            this.visible = false;
+                            this.loading = false;
                         });
                 },
                 shootDart: function () {
@@ -156,7 +166,7 @@
                 },
                 getTops: function () {
                     var self = this;
-                    this.visible = true;
+                    this.loading = true;
                     this.getApi(this.bUrl + "GetTopMatchUsers/?matchId=" + this.match.id + "&size=3")
                         .then((apiResults) => {
                             if (apiResults.status === 200) {
@@ -164,7 +174,7 @@
                             } else {
                                 self.showMessage({ message: apiResults.message, type: 'error' });
                             }
-                            this.visible = false;
+                            this.loading = false;
                         });
                 },
                 setGameOver: function () {
