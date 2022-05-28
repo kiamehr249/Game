@@ -166,7 +166,6 @@
                 },
                 getTops: function () {
                     var self = this;
-                    this.loading = true;
                     this.getApi(this.bUrl + "GetTopMatchUsers/?matchId=" + this.match.id + "&size=3")
                         .then((apiResults) => {
                             if (apiResults.status === 200) {
@@ -174,7 +173,6 @@
                             } else {
                                 self.showMessage({ message: apiResults.message, type: 'error' });
                             }
-                            this.loading = false;
                         });
                 },
                 setGameOver: function () {
